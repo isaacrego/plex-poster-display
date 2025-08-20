@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="config-container">
+  <h1>Movie Poster Display — Configuration</h1>
+
+  <form id="cfgForm" method="POST" action="{{ url_for('save_config') }}">
+    <div class="config-actions">
+      <button type="button" id="resetBtn" class="btn btn-secondary">Reset (Keep Connection)</button>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+
+    <section class="card">
+      <h2>Connection</h2>
+      <div class="grid-2">
+        <label>Plex IP (include port if not 32400)
+          <input name="plex_ip" type="text" placeholder="10.0.0.99:32400" value="{{ cfg.connection.plex_ip }}">
+        </label>
+        <label>Plex Token
+          <input name="plex_token" type="password" value="{{ cfg.connection.plex_token }}">
+        </label>
+      </div>
+      <div>
+        <button id="testBtn" type="button" class="btn btn-outline">Test Connection</button>
+        <span id="testResult" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Poster</h2>
+      <div class="grid-3">
+        <label>Fill
+          <select name="fill">
+            <option value="fill-stretch" {{ 'selected' if cfg.poster.fill=='fill-stretch' }}>Fill (Stretch)</option>
+            <option value="crop" {{ 'selected' if cfg.poster.fill=='crop' }}>Crop</option>
+            <option value="fill-aspect" {{ 'selected' if cfg.poster.fill=='fill-aspect' }}>Fill Maintain Aspect</option>
+          </select>
+        </label>
+        <label class="checkbox">
+          <input name="large_only" type="checkbox" {{ 'checked' if cfg.poster.large_only }}> Large Only (>=1080p)
+        </label>
+        <label>Library (Section Key)
+          <input name="library" type="number" min="1" step="1" placeholder="e.g., 5" value="{{ cfg.poster.library }}">
+        </label>
+      </div>
+
+      <div class="grid-3">
+        <label>Plex Rating Type
+          <select name="rating_type">
+            <option value="critic" {{ 'selected' if cfg.poster.rating_type=='critic' }}>Critic</option>
+            <option value="audience" {{ 'selected' if cfg.poster.rating_type=='audience' }}>Audience</option>
+          </select>
+        </label>
+        <label>Rating Threshold
+          <input name="rating_threshold" type="number" step="0.1" min="0" max="10" value="{{ cfg.poster.rating_threshold }}">
+        </label>
+        <label>Idle Rotation (seconds)
+          <input name="idle_rotation_seconds" type="number" min="1" step="1" value="{{ cfg.poster.idle_rotation_seconds }}">
+        </label>
+      </div>
+      <div class="grid-3">
+        <label class="checkbox">
+          <input name="paused_counts_as_playing" type="checkbox" {{ 'checked' if cfg.poster.paused_counts_as_playing }}> Treat paused as Now Playing
+        </label>
+        <div></div>
+        <div></div>
+      </div>
+
+
+      <div class="mpaa">
+        <span>MPAA Rating (Allowed):</span>
+        {% set allowed = cfg.poster.mpaa_allowed or [] %}
+        {% for r in ['G','PG','PG-13','R','NC-17','Unknown'] %}
+          <label class="checkbox">
+            <input type="checkbox" name="mpaa_allowed" value="{{ r }}" {{ 'checked' if r in allowed }}> {{ r }}
+          </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Banner</h2>
+      <div class="grid-3">
+        <label class="checkbox">
+          <input name="banner_enable" type="checkbox" {{ 'checked' if cfg.banner.enable }}> Enable Banners
+        </label>
+        <label>Font Size (px)
+          <input name="font_size" type="number" min="12" max="200" value="{{ cfg.banner.font_size }}">
+        </label>
+        <label>Font Color
+          <input name="font_color" type="color" value="{{ cfg.banner.font_color }}">
+        </label>
+      </div>
+
+      <div class="grid-3">
+        <label>Font Style
+          <select name="font_family">
+            <option value="neon" {{ 'selected' if cfg.banner.font_family=='neon' }}>Neon Theatre</option>
+            <option value="cinzel" {{ 'selected' if cfg.banner.font_family=='cinzel' }}>Classic (Cinzel-like)</option>
+            <option value="bebas" {{ 'selected' if cfg.banner.font_family=='bebas' }}>Poster (Bebas-like)</option>
+          </select>
+        </label>
+        <div></div>
+        <div></div>
+      </div>
+
+      <div class="grid-1">
+        <label>Idle Top Banner Text
+          <input name="idle_top_text" type="text" placeholder="COMING SOON" value="{{ cfg.banner.idle_top_text }}">
+        </label>
+      </div>
+      <div class="grid-1">
+        <label>Active Top Banner Text
+          <input name="active_top_text" type="text" placeholder="NOW PLAYING" value="{{ cfg.banner.active_top_text }}">
+        </label>
+      </div>
+      <div class="grid-1">
+        <label>Bottom Banner Text
+          <input name="bottom_text" type="text" placeholder="" value="{{ cfg.banner.bottom_text }}">
+        </label>
+      </div>
+      <p class="muted">Tip: If all banner text fields are blank, the poster will use the full screen.</p>
+    </section>
+
+    <div class="config-actions bottom">
+      <button type="button" id="resetBtnBottom" class="btn btn-secondary">Reset (Keep Connection)</button>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  async function testConnection() {
+    const form = document.getElementById('cfgForm');
+    const fd = new FormData();
+    fd.append('plex_ip', form.plex_ip.value);
+    fd.append('plex_token', form.plex_token.value);
+    const res = await fetch('{{ url_for("config_test") }}', { method: 'POST', body: fd });
+    const data = await res.json();
+    const el = document.getElementById('testResult');
+    el.textContent = data.ok ? 'Connected!' : ('Failed: ' + (data.message || 'Unknown error'));
+    el.classList.toggle('ok', !!data.ok);
+    el.classList.toggle('err', !data.ok);
+  }
+
+  async function resetConfig() {
+    const yes = confirm('Reset to defaults (keeping connection info)?');
+    if (!yes) return;
+    const res = await fetch('{{ url_for("config_reset") }}', { method: 'POST' });
+    if (res.ok) location.reload();
+  }
+
+  document.getElementById('testBtn').addEventListener('click', testConnection);
+  document.getElementById('resetBtn').addEventListener('click', resetConfig);
+  document.getElementById('resetBtnBottom').addEventListener('click', resetConfig);
+</script>
+{% endblock %}

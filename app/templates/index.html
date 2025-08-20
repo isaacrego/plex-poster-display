@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="app" class="viewport">
+  <div id="top-banner" class="banner banner-top"></div>
+  <div id="poster-container" class="poster-container">
+    <div id="not-connected" class="not-connected hidden">Not connected</div>
+    <img id="poster" class="poster-img" alt="Poster">
+  </div>
+  <div id="bottom-banner" class="banner banner-bottom"></div>
+</div>
+
+<script>
+  const POLL_MS = 5000;
+
+  function setFillMode(mode) {
+    const img = document.getElementById('poster');
+    img.classList.remove('fill-stretch','crop','fill-aspect');
+    img.classList.add(mode);
+  }
+
+  function setBannerStyles(banner) {
+    const topEl = document.getElementById('top-banner');
+    const botEl = document.getElementById('bottom-banner');
+
+    topEl.style.fontSize = (banner.font_size || 48) + 'px';
+    botEl.style.fontSize = (banner.font_size || 48) + 'px';
+    topEl.style.color = banner.font_color || '#ff4df0';
+    botEl.style.color = banner.font_color || '#ff4df0';
+
+    topEl.classList.remove('font-neon','font-cinzel','font-bebas');
+    botEl.classList.remove('font-neon','font-cinzel','font-bebas');
+
+    switch ((banner.font_family || 'neon').toLowerCase()) {
+      case 'cinzel': topEl.classList.add('font-cinzel'); botEl.classList.add('font-cinzel'); break;
+      case 'bebas': topEl.classList.add('font-bebas'); botEl.classList.add('font-bebas'); break;
+      default: topEl.classList.add('font-neon'); botEl.classList.add('font-neon'); break;
+    }
+  }
+
+  function applyBannerVisibility(show, topText, bottomText) {
+    const topEl = document.getElementById('top-banner');
+    const botEl = document.getElementById('bottom-banner');
+    const posterContainer = document.getElementById('poster-container');
+
+    const topVisible = show && topText && topText.trim().length > 0;
+    const bottomVisible = show && bottomText && bottomText.trim().length > 0;
+
+    topEl.textContent = topVisible ? topText : '';
+    botEl.textContent = bottomVisible ? bottomText : '';
+
+    topEl.classList.toggle('hidden', !topVisible);
+    botEl.classList.toggle('hidden', !bottomVisible);
+
+    if (!topVisible && !bottomVisible) {
+      posterContainer.classList.add('full');
+    } else {
+      posterContainer.classList.remove('full');
+    }
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('/api/current');
+      const data = await res.json();
+
+      const notConn = document.getElementById('not-connected');
+      const poster = document.getElementById('poster');
+
+      if (!data.connected) {
+        notConn.textContent = data.message || 'Not connected';
+        notConn.classList.remove('hidden');
+        poster.src = '';
+        applyBannerVisibility(false, '', '');
+        return;
+      } else {
+        notConn.classList.add('hidden');
+      }
+
+      setFillMode(data.fill_mode || 'crop');
+      setBannerStyles(data.banner || {});
+
+      let image = null;
+      let topText = data.top_text || '';
+      let bottomText = data.bottom_text || '';
+
+      if (data.now_playing) {
+        image = data.now_playing.image;
+      } else if (data.idle) {
+        image = data.idle.image;
+      }
+
+      if (image && poster.src !== image) {
+        poster.src = image;
+      }
+
+      applyBannerVisibility(!!data.show_banners, topText, bottomText);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  poll();
+  setInterval(poll, POLL_MS);
+</script>
+{% endblock %}

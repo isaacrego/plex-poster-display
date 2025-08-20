@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  movie-poster-display:
+    build: .
+    container_name: movie-poster-display
+    restart: unless-stopped
+    ports:
+      - "9090:8000"
+    environment:
+      - TZ=America/Chicago
+    volumes:
+      - ./app/data:/app/app/data

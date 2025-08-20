@@ -1,0 +1,31 @@
+{
+  "connection": {
+    "plex_ip": "",
+    "plex_token": ""
+  },
+  "poster": {
+    "library": "",
+    "fill": "crop",
+    "large_only": true,
+    "rating_type": "critic",
+    "rating_threshold": 0.0,
+    "idle_rotation_seconds": 20,
+    "mpaa_allowed": [
+      "G",
+      "PG",
+      "PG-13",
+      "R",
+      "NC-17",
+      "Unknown"
+    ]
+  },
+  "banner": {
+    "enable": true,
+    "font_family": "neon",
+    "font_size": 48,
+    "font_color": "#ff4df0",
+    "idle_top_text": "COMING SOON",
+    "active_top_text": "NOW PLAYING",
+    "bottom_text": ""
+  }
+}
