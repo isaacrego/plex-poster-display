@@ -4,16 +4,17 @@
   <div id="top-banner" class="banner banner-top"></div>
   <div id="poster-container" class="poster-container">
     <div id="not-connected" class="not-connected hidden">Not connected</div>
-    <img id="poster" class="poster-img" alt="Poster">
+    <img id="poster-1" class="poster-img" alt="Poster">
+    <img id="poster-2" class="poster-img hidden" alt="Poster">
   </div>
   <div id="bottom-banner" class="banner banner-bottom"></div>
 </div>
 
 <script>
   const POLL_MS = 5000;
-
+  let currentPosterId = 'poster-1';
   function setFillMode(mode) {
-    const img = document.getElementById('poster');
+  const img = document.getElementById(currentPosterId);
     img.classList.remove('fill-stretch','crop','fill-aspect');
     img.classList.add(mode);
   }
@@ -64,12 +65,14 @@
       const data = await res.json();
 
       const notConn = document.getElementById('not-connected');
-      const poster = document.getElementById('poster');
-
+      const p1 = document.getElementById('poster-1');
+      const p2 = document.getElementById('poster-2');
+      const activePoster = document.getElementById(currentPosterId);
+      const inactivePoster = currentPosterId === 'poster-1' ? p2 : p1;
       if (!data.connected) {
         notConn.textContent = data.message || 'Not connected';
         notConn.classList.remove('hidden');
-        poster.src = '';
+        activePoster.src = '';
         applyBannerVisibility(false, '', '');
         return;
       } else {
@@ -89,8 +92,14 @@
         image = data.idle.image;
       }
 
-      if (image && poster.src !== image) {
-        poster.src = image;
+      if (image && activePoster.getAttribute('src') !== image) {
+        // Load to hidden element first
+        inactivePoster.src = image;
+        inactivePoster.onload = () => {
+          inactivePoster.classList.remove('hidden');
+          activePoster.classList.add('hidden');
+          currentPosterId = inactivePoster.id;
+        };
       }
 
       applyBannerVisibility(!!data.show_banners, topText, bottomText);
